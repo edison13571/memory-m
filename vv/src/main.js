@@ -6,8 +6,8 @@ import router from './router'
 import './assets/css/bootstrap.min.css'
 import './assets/js/bootstrap.min'
 // mock模拟api demo中使用，后端运行需要注释掉
-import Mock from './mock'
-Mock.bootstrap()
+// import Mock from './mock'
+// Mock.bootstrap()
 
 Vue.config.productionTip = false
 

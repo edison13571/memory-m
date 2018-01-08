@@ -61,11 +61,25 @@
       <span class="badge">{{ memoryNumber }}</span>
       <button class="btn btn-default" type="submit" data-toggle="modal" data-target="#MemoryCreateModal">创建</button>
       <button class="btn btn-default" @click="MemoryDelShow.open = !MemoryDelShow.open;MemoryDelShow.content=OpenOrClose(MemoryDelShow.content);" v-text="MemoryDelShow.content"></button>
+      <button class="btn btn-default" @click="MemorySearchShow.open = !MemorySearchShow.open;MemorySearchShow.content=OpenOrClose(MemorySearchShow.content);" v-text="MemorySearchShow.content"></button>
       <button class="btn btn-default pull-right" @click="MemoryShow.open = !MemoryShow.open;MemoryShow.content=OpenOrClose(MemoryShow.content)" v-text="MemoryShow.content"></button>
     </p>
   </div>
+  <div v-show="MemorySearchShow.open">
+     <form v-model="memorySearch">
+        <div class="form-group">
+          <label for="name">名称</label>
+          <input v-model="memorySearch.name" type="text" class="form-control" placeholder="请输入查找名称">
+        </div>
+        <div class="form-group">
+          <label for="类别">类别</label>
+          <input v-model="memorySearch.family" type="url" class="form-control" placeholder="请输入查找类别">
+        </div>
+      </form>
+      <button type="button" class="btn btn-primary" @click="searchMemoriesContent">搜索</button>
+  </div>
   <div v-show="MemoryShow.open">
-    <div class="col-md-3 col-xs-6 memories-item" v-for="item in memory">
+    <div class="col-md-3 col-xs-12 memories-item" v-for="item in memory">
       
       <div v-if="item.type === '图片'">
       <h3 class="list-group-item-heading" >
@@ -74,6 +88,7 @@
         <span class="label label-info">{{ item.family }}</span>
       </h3>
       <img id="memories-pics" class="list-group-item-text" :src="'http://otoibqemc.bkt.clouddn.com/memories/'+item.content+'.jpg-sim'">
+      <button class="btn btn-default pull-right" @click="restoreMemory(item.id)">重置</button>
       <button class="btn btn-default pull-right" @click="remeberMemory(item.id,item.recall_style)">Next:{{ item.recall_style }}</button>
       </div>
 
@@ -81,6 +96,7 @@
         <button class="btn btn-danger" v-show="MemoryDelShow.open" @click="delMemory(item.id,item.name)">删除</button>
         <a class="list-group-item-text" :href=item.content><h3 class="list-group-item-heading" >{{ item.name }}</h3></a>
         <span class="label label-info">{{ item.family }}</span>
+        <button class="btn btn-default pull-right" @click="restoreMemory(item.id)">重置</button>
         <button class="btn btn-default pull-right" @click="remeberMemory(item.id,item.recall_style)">Next:{{ item.recall_style }}</button>
       </div>
 
@@ -91,9 +107,11 @@
           <span class="label label-info">{{ item.family }}</span>
         </h3>
         <p class="list-group-item-text">{{ item.content }}</p>
+        <button class="btn btn-default pull-right" @click="restoreMemory(item.id)">重置</button>
         <button class="btn btn-default pull-right" @click="remeberMemory(item.id,item.recall_style)">Next:{{ item.recall_style }}</button>
       </div>
     </div>
+    <center><button class="btn btn-primary" @click="getMoreMemoriesContent" v-show="getMoreMemoriesShow">加载更多</button></center>
   </div>
 </div>
 
@@ -195,18 +213,25 @@
 </template>
 
 <script>
-import {GetLinks, CreateLink, DelLink, GetLists, CreateList, FinishList, DelList, GetMemories, CreateMemory, RememberMemory, FinishMemory, DelMemory} from '../api/api'
+import {GetLinks, CreateLink, DelLink, GetLists, CreateList, FinishList, DelList, GetMemories, CreateMemory, RememberMemory, FinishMemory, DelMemory, RestoreMemory} from '../api/api'
 // 引用工具文件
 import utils from '../utils/index.js'
 export default {
   data () {
     return {
+      memories: {
+        page: 1,
+        name: '',
+        family: ''
+      },
       ListShow: {open: true, content: '折叠'},
       LinkShow: {open: true, content: '折叠'},
       MemoryShow: {open: true, content: '折叠'},
       LinkDelShow: {open: false, content: '删除'},
       ListDelShow: {open: false, content: '删除'},
       MemoryDelShow: {open: false, content: '删除'},
+      MemorySearchShow: {open: false, content: '检索'},
+      getMoreMemoriesShow: false,
       linkCreate: {
         name: '',
         href: '',
@@ -222,6 +247,10 @@ export default {
         family: '',
         type: ''
       },
+      memorySearch: {
+        name: '',
+        family: ''
+      },
       list: [],
       listNumber: 0,
       memory: [],
@@ -235,6 +264,8 @@ export default {
       if (str === '折叠') { return '打开' }
       if (str === '删除') { return '取消' }
       if (str === '取消') { return '删除' }
+      if (str === '检索') { return '收起' }
+      if (str === '收起') { return '检索' }
     },
     getLinksContent: function () {
       GetLinks().then((res) => {
@@ -297,7 +328,35 @@ export default {
       }
     },
     getMemoriesContent: function () {
-      GetMemories().then((res) => {
+      let para = {
+        page: this.memories.page,
+        name: this.memories.name,
+        family: this.memories.family
+      }
+      GetMemories(para).then((res) => {
+        this.memory = res.data.memories
+        this.memoryNumber = res.data.number
+        if (this.memoryNumber > 10) {
+          this.getMoreMemoriesShow = true
+        } else {
+          this.getMoreMemoriesShow = false
+        }
+      })
+    },
+    searchMemoriesContent: function () {
+      this.memories.page = 1
+      this.memories.name = this.memorySearch.name
+      this.memories.family = this.memorySearch.family
+      this.getMemoriesContent()
+    },
+    getMoreMemoriesContent: function (page) {
+      this.memories.page ++
+      let para = {
+        page: this.memories.page,
+        name: this.memories.name,
+        family: this.memories.family
+      }
+      GetMemories(para).then((res) => {
         this.memory = res.data.memories
         this.memoryNumber = res.data.number
       })
@@ -330,6 +389,18 @@ export default {
           recall_time: recall.time
         }
         RememberMemory(para).then((res) => {
+          console.log(res.data)
+          this.getMemoriesContent()
+        })
+      }
+    },
+    restoreMemory: function (id) {
+      let r = confirm('确认重置' + name + '吗？')
+      if (r === true) {
+        let para = {
+          id: id
+        }
+        RestoreMemory(para).then((res) => {
           console.log(res.data)
           this.getMemoriesContent()
         })
