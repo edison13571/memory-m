@@ -14,11 +14,24 @@ class MemoriesController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
         $now=Carbon::now();
-        $memories=DB::table('memories')->where('deleted_at','=',NULL)->where('recall_time','<=',$now)->get();
+        $name = $request->name;
+        $family = $request->family;
+        $page = $request->page;
+        $page =(int)$page;
+        if ($name == null && $family == null) {
+            $memories=DB::table('memories')->where('deleted_at','=',NULL)->where('recall_time','<=',$now)->get();
+             }
+        else {
+            $memories=DB::table('memories')->where('deleted_at','=',NULL)->where('recall_time','<=',$now)->where('name', 'like', '%'.$name.'%')->where('family', 'like', '%'.$family.'%')->get();
+        }
         $number=$memories->count();
+        $memories = $memories->toArray();
+        if($number > 10){
+            $memories=array_slice($memories,0,$page*10);
+        }
         return response()->json(['memories' => $memories,'number'=>$number]);
     }
 
@@ -80,9 +93,16 @@ class MemoriesController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request)
     {
-        //
+        $now=Carbon::now();
+        $id = $request->id;
+        $memories = Memory::findOrFail($id);
+        $memories->update([
+            'recall_style' =>'30Min',
+            'recall_time'=> $now
+          ]);
+        return response()->json(['code' => '666','msg' => '重置成功成功！']);
     }
 
     /**

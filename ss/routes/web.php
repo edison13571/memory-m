@@ -26,5 +26,6 @@ Route::resource('memories','MemoriesController');
 Route::get('memoriesremember','MemoriesController@remeber');
 Route::get('memoriesfinish','MemoriesController@finish');
 Route::get('memoriesdel','MemoriesController@destroy');
+Route::get('memoriesrestore','MemoriesController@update');
 
 Route::get('logincheck','UsersController@store');
